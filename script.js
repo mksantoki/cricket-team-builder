@@ -29,6 +29,14 @@ const selectedPlayersSection = document.getElementById('selectedPlayersSection')
 const selectedPlayersList = document.getElementById('selectedPlayersList');
 const selectedCountDisplay = document.getElementById('selectedCountDisplay');
 
+// Quick Select Elements
+const quickSelectBtn = document.getElementById('quickSelectBtn');
+const quickSelectPanel = document.getElementById('quickSelectPanel');
+const closeQuickSelect = document.getElementById('closeQuickSelect');
+const quickSelectList = document.getElementById('quickSelectList');
+const quickSelectCount = document.getElementById('quickSelectCount');
+const doneQuickSelect = document.getElementById('doneQuickSelect');
+
 // Event Listeners
 parseBtn.addEventListener('click', parseHTML);
 searchInput.addEventListener('input', filterPlayers);
@@ -39,6 +47,20 @@ saveBattingOrderBtn.addEventListener('click', saveBattingOrder);
 createTeamBtn.addEventListener('click', createBalancedTeam);
 copyTeamABtn.addEventListener('click', () => copyTeamToClipboard('A'));
 copyTeamBBtn.addEventListener('click', () => copyTeamToClipboard('B'));
+
+// Quick Select Event Listeners
+quickSelectBtn.addEventListener('click', openQuickSelect);
+closeQuickSelect.addEventListener('click', closeQuickSelectPanel);
+doneQuickSelect.addEventListener('click', closeQuickSelectPanel);
+
+// Quick Select Filter Buttons
+document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        renderQuickSelectList(e.target.dataset.filter);
+    });
+});
 
 // Parse HTML and extract player data
 function parseHTML() {
@@ -1214,4 +1236,94 @@ async function copyTeamToClipboard(teamLetter) {
         document.body.removeChild(textarea);
         alert(`Team ${teamLetter} copied to clipboard!`);
     }
+}
+
+// ==================== QUICK SELECT FUNCTIONS ====================
+
+// Open Quick Select Panel
+function openQuickSelect() {
+    quickSelectPanel.style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
+    renderQuickSelectList('all');
+    updateQuickSelectCount();
+}
+
+// Close Quick Select Panel
+function closeQuickSelectPanel() {
+    quickSelectPanel.style.display = 'none';
+    document.body.style.overflow = ''; // Restore scroll
+    
+    // Refresh main view
+    filterPlayers();
+    renderSelectedPlayers();
+    
+    // Check if we need to show batting order section
+    if (selectedPlayers.length >= 24) {
+        battingOrderSection.style.display = 'block';
+        renderBattingOrderInputs();
+    } else {
+        battingOrderSection.style.display = 'none';
+        teamSection.style.display = 'none';
+        resultSection.style.display = 'none';
+    }
+}
+
+// Render Quick Select List
+function renderQuickSelectList(filter = 'all') {
+    let players = allPlayers;
+    
+    if (filter !== 'all') {
+        players = allPlayers.filter(p => p.role === filter);
+    }
+    
+    // Sort alphabetically for easier finding
+    players = players.slice().sort((a, b) => a.name.localeCompare(b.name));
+    
+    quickSelectList.innerHTML = players.map(player => {
+        const isSelected = selectedPlayers.some(p => p.id === player.id);
+        return `
+            <div class="quick-select-item ${isSelected ? 'selected' : ''}" data-player-id="${player.id}">
+                <div class="quick-check"></div>
+                <div class="quick-player-info">
+                    <div class="quick-player-name">${player.name}</div>
+                    <div class="quick-player-role">${player.role}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add click listeners
+    document.querySelectorAll('.quick-select-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const playerId = parseInt(item.dataset.playerId);
+            toggleQuickSelect(playerId, item);
+        });
+    });
+}
+
+// Toggle player selection in Quick Select
+function toggleQuickSelect(playerId, element) {
+    const player = allPlayers.find(p => p.id === playerId);
+    if (!player) return;
+    
+    const isCurrentlySelected = selectedPlayers.some(p => p.id === playerId);
+    
+    if (isCurrentlySelected) {
+        // Remove from selection
+        selectedPlayers = selectedPlayers.filter(p => p.id !== playerId);
+        element.classList.remove('selected');
+    } else {
+        // Add to selection
+        selectedPlayers.push(player);
+        element.classList.add('selected');
+    }
+    
+    updateQuickSelectCount();
+    saveToLocalStorage();
+}
+
+// Update Quick Select Count
+function updateQuickSelectCount() {
+    quickSelectCount.textContent = `${selectedPlayers.length} selected`;
+    selectedCountEl.textContent = selectedPlayers.length;
 }

@@ -65,6 +65,35 @@
                         <div class="section-divider"></div>
                     </div>
 
+                    <!-- Quick Select Toggle -->
+                    <div class="quick-select-toggle">
+                        <button id="quickSelectBtn" class="btn btn-primary">
+                            <span class="btn-icon">⚡</span>
+                            Quick Select Mode
+                        </button>
+                        <p class="hint">Tap to enable fast multi-select</p>
+                    </div>
+
+                    <!-- Quick Select Panel (Hidden by default) -->
+                    <div id="quickSelectPanel" class="quick-select-panel" style="display: none;">
+                        <div class="quick-select-header">
+                            <h3>⚡ Quick Select - Tap players to select</h3>
+                            <button id="closeQuickSelect" class="btn btn-secondary btn-sm">✕ Close</button>
+                        </div>
+                        <div class="quick-select-filters">
+                            <button class="quick-filter-btn active" data-filter="all">All</button>
+                            <button class="quick-filter-btn" data-filter="batsman">🏏 Bat</button>
+                            <button class="quick-filter-btn" data-filter="bowler">🎯 Bowl</button>
+                            <button class="quick-filter-btn" data-filter="allrounder">⚡ AR</button>
+                            <button class="quick-filter-btn" data-filter="wicketkeeper">🧤 WK</button>
+                        </div>
+                        <div id="quickSelectList" class="quick-select-list"></div>
+                        <div class="quick-select-footer">
+                            <span id="quickSelectCount">0 selected</span>
+                            <button id="doneQuickSelect" class="btn btn-success">Done</button>
+                        </div>
+                    </div>
+
                     <!-- Filter Options -->
                     <div class="filter-bar">
                         <input type="text" id="searchPlayer" class="search-input" placeholder="🔍 Search players...">

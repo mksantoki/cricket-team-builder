@@ -4,7 +4,7 @@ A professional cricket team management application that creates balanced teams u
 
 ## 🔗 Demo
 
-**Live Demo:** [Click here to try the app](https://mksantoki.github.io/cricket-team-builder/)
+**Live Demo:** [Click here to try the app](YOUR_LIVE_LINK_HERE)
 
 ## ✨ Features
 
