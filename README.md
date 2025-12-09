@@ -2,6 +2,10 @@
 
 A professional cricket team management application that creates balanced teams using intelligent algorithms based on player statistics, roles, and batting order priority.
 
+## 🔗 Demo
+
+**Live Demo:** [Click here to try the app](YOUR_LIVE_LINK_HERE)
+
 ## ✨ Features
 
 ### 🎯 Smart Team Balancing
