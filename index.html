@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCC Cricket Team Builder</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">🏏 TCC Cricket Team Builder</h1>
+                <p class="subtitle">Create balanced teams with smart player distribution</p>
+                <button onclick="clearLocalStorage()" class="btn btn-secondary" style="margin-top: 1rem;">
+                    🗑️ Clear Saved Data
+                </button>
+            </div>
+        </header>
+
+        <!-- HTML Input Section -->
+        <section class="input-section" id="inputSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Step 1: Paste Team Profile HTML</h2>
+                    <p class="hint">Copy and paste the full HTML from the Team Profile Search page</p>
+                </div>
+                <div class="card-body">
+                    <textarea id="htmlInput" class="html-input" placeholder="Paste your HTML content here..."
+                        rows="10"></textarea>
+                    <button id="parseBtn" class="btn btn-primary">
+                        <span class="btn-icon">⚡</span>
+                        Parse Players
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Player Selection Section -->
+        <section class="player-section" id="playerSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Step 2: Select Players</h2>
+                    <div class="stats-bar">
+                        <span class="stat-item">
+                            <span class="stat-label">Total Players:</span>
+                            <span class="stat-value" id="totalPlayers">0</span>
+                        </span>
+                        <span class="stat-item">
+                            <span class="stat-label">Selected:</span>
+                            <span class="stat-value" id="selectedCount">0</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Selected Players Section -->
+                    <div id="selectedPlayersSection" class="selected-players-section" style="display: none;">
+                        <h3 class="section-title">✓ Selected Players (<span id="selectedCountDisplay">0</span>)</h3>
+                        <div id="selectedPlayersList" class="selected-players-list"></div>
+                        <div class="section-divider"></div>
+                    </div>
+
+                    <!-- Filter Options -->
+                    <div class="filter-bar">
+                        <input type="text" id="searchPlayer" class="search-input" placeholder="🔍 Search players...">
+                        <select id="roleFilter" class="filter-select">
+                            <option value="all">All Roles</option>
+                            <option value="batsman">Batsman</option>
+                            <option value="bowler">Bowler</option>
+                            <option value="allrounder">All-Rounder</option>
+                            <option value="wicketkeeper">Wicket Keeper</option>
+                        </select>
+                        <button id="selectAllBtn" class="btn btn-secondary">Select All</button>
+                        <button id="clearAllBtn" class="btn btn-secondary">Clear All</button>
+                    </div>
+
+                    <!-- Player List -->
+                    <div id="playerList" class="player-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Batting Order Section -->
+        <section class="batting-order-section" id="battingOrderSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Step 2.5: Add Today's Batting Order</h2>
+                    <p class="hint">For each player, select their status from today's match</p>
+                    <div class="marker-legend">
+                        <span class="legend-item"><span class="marker-badge no-bat">*</span> No batting today</span>
+                        <span class="legend-item"><span class="marker-badge less-over">#</span> Less than 1 over</span>
+                        <span class="legend-item"><strong>Number (1-12)</strong> - Batting position</span>
+                        <span class="legend-item"><span class="marker-badge new-player">NEW</span> Didn't play last
+                            match</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="batting-order-grid" id="battingOrderGrid">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                    <button id="saveBattingOrderBtn" class="btn btn-primary">
+                        <span class="btn-icon">✓</span>
+                        Save Batting Order
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team Creation Section -->
+        <section class="team-section" id="teamSection" style="display: none;">
+            <div class="action-bar">
+                <button id="createTeamBtn" class="btn btn-success">
+                    <span class="btn-icon">🎯</span>
+                    Create Two Balanced Teams
+                </button>
+            </div>
+        </section>
+
+        <!-- Generated Team Section -->
+        <section class="result-section" id="resultSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2>🏆 Your Balanced Teams</h2>
+                    <p class="hint">AI-generated teams with equal distribution of roles and skills</p>
+                    <div class="copy-buttons">
+                        <button id="copyTeamABtn" class="btn btn-secondary">
+                            <span class="btn-icon">📋</span>
+                            Copy Team A
+                        </button>
+                        <button id="copyTeamBBtn" class="btn btn-secondary">
+                            <span class="btn-icon">📋</span>
+                            Copy Team B
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="teamResult" class="team-result"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Disclaimer Footer -->
+        <footer class="disclaimer-footer">
+            <div class="disclaimer-content">
+                <p class="disclaimer-text">
+                    <strong>Disclaimer:</strong> This application is developed for educational and recreational purposes
+                    only.
+                    If you have any concerns or issues regarding this application, please contact us and we will address
+                    them promptly.
+                </p>
+                <p class="disclaimer-subtext">
+                    © 2024 TCC Cricket Team Builder. All rights reserved.
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="playerData.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
