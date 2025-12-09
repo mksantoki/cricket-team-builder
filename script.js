@@ -179,13 +179,14 @@ function selectPlayerFromAutocomplete(playerId) {
     selectedCountEl.textContent = selectedPlayers.length;
     saveToLocalStorage();
     renderSelectedPlayers();
+    
+    // Clear search input and hide autocomplete
+    searchInput.value = '';
+    hideAutocomplete();
     filterPlayers();
     
-    // Update autocomplete to show new state
-    showAutocomplete(searchInput.value);
-    
     // Update batting order section visibility
-    if (selectedPlayers.length >= 24) {
+    if (selectedPlayers.length >= 20) {
         battingOrderSection.style.display = 'block';
         renderBattingOrderInputs();
     } else {
@@ -335,7 +336,7 @@ function loadFromLocalStorage() {
             renderSelectedPlayers();
 
             // Show batting order section if enough players
-            if (selectedPlayers.length >= 24) {
+            if (selectedPlayers.length >= 20) {
                 battingOrderSection.style.display = 'block';
             }
         }
@@ -651,7 +652,7 @@ function renderSelectedPlayers() {
                 filterPlayers();
                 
                 // Update batting order section visibility
-                if (selectedPlayers.length >= 24) {
+                if (selectedPlayers.length >= 20) {
                     battingOrderSection.style.display = 'block';
                     renderBattingOrderInputs();
                 } else {
@@ -691,7 +692,7 @@ function togglePlayerSelection(playerId, isSelected) {
     filterPlayers();
 
     // Show batting order section when 24 players are selected
-    if (selectedPlayers.length >= 24) {
+    if (selectedPlayers.length >= 20) {
         battingOrderSection.style.display = 'block';
         renderBattingOrderInputs();
         battingOrderSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -757,8 +758,8 @@ function clearAll() {
 
 // Create balanced team
 function createBalancedTeam() {
-    if (selectedPlayers.length < 22) {
-        alert(`Please select at least 22 players to create two balanced teams. Currently selected: ${selectedPlayers.length}`);
+    if (selectedPlayers.length < 20) {
+        alert(`Please select at least 20 players to create two balanced teams. Currently selected: ${selectedPlayers.length}`);
         return;
     }
 
@@ -1237,36 +1238,39 @@ function saveBattingOrder() {
     battingOrder = [];
 
     selectedPlayers.forEach(player => {
-        if (!player || !player.id) {
+        if (!player || player.id === undefined) {
             console.warn('Invalid player found:', player);
             return;
         }
 
         const radioChecked = document.querySelector(`input[name="player-${player.id}"]:checked`);
 
+        // Default to 'new' if no radio is checked
+        let status = 'new';
+        let position = null;
+
         if (radioChecked) {
-            const status = radioChecked.value;
-            let position = null;
+            status = radioChecked.value;
 
             if (status === 'number') {
                 const select = document.querySelector(`.position-select[data-player-id="${player.id}"]`);
                 position = select ? select.value : null;
             }
-
-            battingOrder.push({
-                playerId: player.id,
-                status: status,
-                position: position
-            });
-
-            // Also update the player object directly for easy access during team creation
-            player.battingOrderStatus = status;
-            player.battingOrderPosition = position;
         }
+
+        battingOrder.push({
+            playerId: player.id,
+            status: status,
+            position: position
+        });
+
+        // Also update the player object directly for easy access during team creation
+        player.battingOrderStatus = status;
+        player.battingOrderPosition = position;
     });
 
-    console.log('Selected players:', selectedPlayers);
-    console.log('Batting order created:', battingOrder);
+    console.log('Selected players:', selectedPlayers.length);
+    console.log('Batting order created:', battingOrder.length);
 
     saveToLocalStorage();
 
