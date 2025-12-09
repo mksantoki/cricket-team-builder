@@ -28,18 +28,25 @@ const copyTeamBBtn = document.getElementById('copyTeamBBtn');
 const selectedPlayersSection = document.getElementById('selectedPlayersSection');
 const selectedPlayersList = document.getElementById('selectedPlayersList');
 const selectedCountDisplay = document.getElementById('selectedCountDisplay');
+const autocompleteList = document.getElementById('autocompleteList');
 
-// Quick Select Elements
-const quickSelectBtn = document.getElementById('quickSelectBtn');
-const quickSelectPanel = document.getElementById('quickSelectPanel');
-const closeQuickSelect = document.getElementById('closeQuickSelect');
-const quickSelectList = document.getElementById('quickSelectList');
-const quickSelectCount = document.getElementById('quickSelectCount');
-const doneQuickSelect = document.getElementById('doneQuickSelect');
+// Autocomplete state
+let highlightedIndex = -1;
 
 // Event Listeners
 parseBtn.addEventListener('click', parseHTML);
-searchInput.addEventListener('input', filterPlayers);
+searchInput.addEventListener('input', handleSearchInput);
+searchInput.addEventListener('keydown', handleSearchKeydown);
+searchInput.addEventListener('focus', () => {
+    if (searchInput.value.trim()) {
+        showAutocomplete(searchInput.value);
+    }
+});
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrapper')) {
+        hideAutocomplete();
+    }
+});
 roleFilter.addEventListener('change', filterPlayers);
 selectAllBtn.addEventListener('click', selectAll);
 clearAllBtn.addEventListener('click', clearAll);
@@ -48,19 +55,149 @@ createTeamBtn.addEventListener('click', createBalancedTeam);
 copyTeamABtn.addEventListener('click', () => copyTeamToClipboard('A'));
 copyTeamBBtn.addEventListener('click', () => copyTeamToClipboard('B'));
 
-// Quick Select Event Listeners
-quickSelectBtn.addEventListener('click', openQuickSelect);
-closeQuickSelect.addEventListener('click', closeQuickSelectPanel);
-doneQuickSelect.addEventListener('click', closeQuickSelectPanel);
+// Autocomplete Functions
+function handleSearchInput(e) {
+    const value = e.target.value.trim();
+    if (value.length > 0) {
+        showAutocomplete(value);
+    } else {
+        hideAutocomplete();
+    }
+    filterPlayers();
+}
 
-// Quick Select Filter Buttons
-document.querySelectorAll('.quick-filter-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        renderQuickSelectList(e.target.dataset.filter);
+function showAutocomplete(searchTerm) {
+    const term = searchTerm.toLowerCase();
+    const matches = allPlayers
+        .filter(player => 
+            player.name.toLowerCase().includes(term) ||
+            player.battingStyle.toLowerCase().includes(term) ||
+            player.bowlingStyle.toLowerCase().includes(term)
+        )
+        .slice(0, 10); // Limit to 10 suggestions
+    
+    if (matches.length === 0) {
+        hideAutocomplete();
+        return;
+    }
+    
+    highlightedIndex = -1;
+    
+    autocompleteList.innerHTML = matches.map((player, index) => {
+        const isSelected = selectedPlayers.some(p => p.id === player.id);
+        const highlightedName = player.name.replace(
+            new RegExp(`(${escapeRegex(searchTerm)})`, 'gi'),
+            '<mark>$1</mark>'
+        );
+        
+        return `
+            <div class="autocomplete-item ${isSelected ? 'selected' : ''}" 
+                 data-player-id="${player.id}" 
+                 data-index="${index}">
+                <div>
+                    <span class="autocomplete-name">${highlightedName}</span>
+                    ${isSelected ? '<span class="autocomplete-check">✓</span>' : ''}
+                </div>
+                <span class="autocomplete-role">${player.role}</span>
+            </div>
+        `;
+    }).join('');
+    
+    // Add click listeners to autocomplete items
+    autocompleteList.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const playerId = parseInt(item.dataset.playerId);
+            selectPlayerFromAutocomplete(playerId);
+        });
     });
-});
+    
+    autocompleteList.classList.add('active');
+}
+
+function hideAutocomplete() {
+    autocompleteList.classList.remove('active');
+    highlightedIndex = -1;
+}
+
+function handleSearchKeydown(e) {
+    const items = autocompleteList.querySelectorAll('.autocomplete-item');
+    
+    if (!autocompleteList.classList.contains('active') || items.length === 0) {
+        return;
+    }
+    
+    switch (e.key) {
+        case 'ArrowDown':
+            e.preventDefault();
+            highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+            updateHighlight(items);
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            highlightedIndex = Math.max(highlightedIndex - 1, 0);
+            updateHighlight(items);
+            break;
+        case 'Enter':
+            e.preventDefault();
+            if (highlightedIndex >= 0 && highlightedIndex < items.length) {
+                const playerId = parseInt(items[highlightedIndex].dataset.playerId);
+                selectPlayerFromAutocomplete(playerId);
+            }
+            break;
+        case 'Escape':
+            hideAutocomplete();
+            searchInput.blur();
+            break;
+    }
+}
+
+function updateHighlight(items) {
+    items.forEach((item, index) => {
+        if (index === highlightedIndex) {
+            item.classList.add('highlighted');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('highlighted');
+        }
+    });
+}
+
+function selectPlayerFromAutocomplete(playerId) {
+    const player = allPlayers.find(p => p.id === playerId);
+    if (!player) return;
+    
+    const isCurrentlySelected = selectedPlayers.some(p => p.id === playerId);
+    
+    if (isCurrentlySelected) {
+        // Deselect
+        selectedPlayers = selectedPlayers.filter(p => p.id !== playerId);
+    } else {
+        // Select
+        selectedPlayers.push(player);
+    }
+    
+    selectedCountEl.textContent = selectedPlayers.length;
+    saveToLocalStorage();
+    renderSelectedPlayers();
+    filterPlayers();
+    
+    // Update autocomplete to show new state
+    showAutocomplete(searchInput.value);
+    
+    // Update batting order section visibility
+    if (selectedPlayers.length >= 24) {
+        battingOrderSection.style.display = 'block';
+        renderBattingOrderInputs();
+    } else {
+        battingOrderSection.style.display = 'none';
+        teamSection.style.display = 'none';
+        resultSection.style.display = 'none';
+    }
+}
+
+function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // Parse HTML and extract player data
 function parseHTML() {
@@ -493,10 +630,35 @@ function renderSelectedPlayers() {
     // Add event listeners to remove buttons
     document.querySelectorAll('.remove-player-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const playerId = e.target.dataset.playerId;
+            e.stopPropagation();
+            const playerId = parseInt(e.target.dataset.playerId);
             const player = allPlayers.find(p => p.id === playerId);
             if (player) {
-                togglePlayerSelection(playerId, false);
+                // Remove from selected players directly
+                selectedPlayers = selectedPlayers.filter(p => p.id !== playerId);
+                selectedCountEl.textContent = selectedPlayers.length;
+                
+                // Update checkbox if visible
+                const checkbox = document.querySelector(`.player-checkbox[data-player-id="${playerId}"]`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                    checkbox.closest('.player-card')?.classList.remove('selected');
+                }
+                
+                // Save and refresh
+                saveToLocalStorage();
+                renderSelectedPlayers();
+                filterPlayers();
+                
+                // Update batting order section visibility
+                if (selectedPlayers.length >= 24) {
+                    battingOrderSection.style.display = 'block';
+                    renderBattingOrderInputs();
+                } else {
+                    battingOrderSection.style.display = 'none';
+                    teamSection.style.display = 'none';
+                    resultSection.style.display = 'none';
+                }
             }
         });
     });
@@ -545,42 +707,26 @@ function filterPlayers() {
     const searchTerm = searchInput.value.toLowerCase();
     const selectedRole = roleFilter.value;
 
-    let filtered = allPlayers;
-
-    // Apply search filter
+    // If searching, don't show player cards - autocomplete handles it
     if (searchTerm) {
-        filtered = filtered.filter(player =>
-            player.name.toLowerCase().includes(searchTerm) ||
-            player.battingStyle.toLowerCase().includes(searchTerm) ||
-            player.bowlingStyle.toLowerCase().includes(searchTerm)
-        );
-    }
-
-    // Apply role filter
-    if (selectedRole !== 'all') {
-        filtered = filtered.filter(player => player.role === selectedRole);
-    }
-
-    // If no search/filter is active, only show selected players
-    if (!searchTerm && selectedRole === 'all') {
-        filtered = allPlayers.filter(player =>
-            selectedPlayers.find(p => p.id === player.id)
-        );
-
-        // Don't show any message - selected players are shown in the section above
-        if (filtered.length === 0) {
-            playerList.innerHTML = '';
-            return;
-        }
-    }
-
-    // Show message if search returns no results
-    if (filtered.length === 0) {
-        playerList.innerHTML = '<p class="no-players">No players found matching your search.</p>';
+        playerList.innerHTML = '';
         return;
     }
 
-    renderPlayers(filtered);
+    // If role filter is active, show filtered players
+    if (selectedRole !== 'all') {
+        let filtered = allPlayers.filter(player => player.role === selectedRole);
+        if (filtered.length === 0) {
+            playerList.innerHTML = '<p class="no-players">No players found for this role.</p>';
+            return;
+        }
+        renderPlayers(filtered);
+        return;
+    }
+
+    // No search/filter - don't show any player cards
+    // Selected players are shown in the section above
+    playerList.innerHTML = '';
 }
 
 // Select all visible players
@@ -1236,94 +1382,4 @@ async function copyTeamToClipboard(teamLetter) {
         document.body.removeChild(textarea);
         alert(`Team ${teamLetter} copied to clipboard!`);
     }
-}
-
-// ==================== QUICK SELECT FUNCTIONS ====================
-
-// Open Quick Select Panel
-function openQuickSelect() {
-    quickSelectPanel.style.display = 'flex';
-    document.body.style.overflow = 'hidden'; // Prevent background scroll
-    renderQuickSelectList('all');
-    updateQuickSelectCount();
-}
-
-// Close Quick Select Panel
-function closeQuickSelectPanel() {
-    quickSelectPanel.style.display = 'none';
-    document.body.style.overflow = ''; // Restore scroll
-    
-    // Refresh main view
-    filterPlayers();
-    renderSelectedPlayers();
-    
-    // Check if we need to show batting order section
-    if (selectedPlayers.length >= 24) {
-        battingOrderSection.style.display = 'block';
-        renderBattingOrderInputs();
-    } else {
-        battingOrderSection.style.display = 'none';
-        teamSection.style.display = 'none';
-        resultSection.style.display = 'none';
-    }
-}
-
-// Render Quick Select List
-function renderQuickSelectList(filter = 'all') {
-    let players = allPlayers;
-    
-    if (filter !== 'all') {
-        players = allPlayers.filter(p => p.role === filter);
-    }
-    
-    // Sort alphabetically for easier finding
-    players = players.slice().sort((a, b) => a.name.localeCompare(b.name));
-    
-    quickSelectList.innerHTML = players.map(player => {
-        const isSelected = selectedPlayers.some(p => p.id === player.id);
-        return `
-            <div class="quick-select-item ${isSelected ? 'selected' : ''}" data-player-id="${player.id}">
-                <div class="quick-check"></div>
-                <div class="quick-player-info">
-                    <div class="quick-player-name">${player.name}</div>
-                    <div class="quick-player-role">${player.role}</div>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    // Add click listeners
-    document.querySelectorAll('.quick-select-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const playerId = parseInt(item.dataset.playerId);
-            toggleQuickSelect(playerId, item);
-        });
-    });
-}
-
-// Toggle player selection in Quick Select
-function toggleQuickSelect(playerId, element) {
-    const player = allPlayers.find(p => p.id === playerId);
-    if (!player) return;
-    
-    const isCurrentlySelected = selectedPlayers.some(p => p.id === playerId);
-    
-    if (isCurrentlySelected) {
-        // Remove from selection
-        selectedPlayers = selectedPlayers.filter(p => p.id !== playerId);
-        element.classList.remove('selected');
-    } else {
-        // Add to selection
-        selectedPlayers.push(player);
-        element.classList.add('selected');
-    }
-    
-    updateQuickSelectCount();
-    saveToLocalStorage();
-}
-
-// Update Quick Select Count
-function updateQuickSelectCount() {
-    quickSelectCount.textContent = `${selectedPlayers.length} selected`;
-    selectedCountEl.textContent = selectedPlayers.length;
 }
